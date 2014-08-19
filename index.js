@@ -48,38 +48,10 @@ function parse_chunk(source) {
       }
     }
 
-    //if (tag.name.indexOf('.') !== -1) {
-    //  var parent_name;
-    //  var parent_tag;
-    //  var parent_tags = tags;
-    //  var parts = tag.name.split('.');
-
-    //  while (parts.length > 1) {
-    //    parent_name = parts.shift()
-    //    parent_tag  = _.findWhere(parent_tags, {
-    //      tag  : tag.tag,
-    //      name : parent_name
-    //    });
-
-    //    if (!parent_tag) {
-    //      parent_tag = {
-    //        tag         : tag.tag,
-    //        name        : parent_name,
-    //        type        : '',
-    //        description : ''
-    //      }
-    //      parent_tags.push(parent_tag);
-    //    }
-
-    //    parent_tag.tags = parent_tag.tags || [];
-    //    parent_tags = parent_tag.tags;
-    //  }
-
-    //  tag.name = parts[0];
-    //  parent_tags.push(tag);
-
-    //  return tags;
-    //}
+    if (tag.tag.indexOf('description') > -1) {
+        tag.description = tag.name + ' ' + tag.description;
+        tag.name = '';
+    }
 
     return tags.concat(tag);
   }, []);
