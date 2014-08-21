@@ -53,6 +53,11 @@ function parse_chunk(source) {
         tag.name = '';
     }
 
+    if (tag.tag.indexOf('remarks') > -1) {
+        tag.remarks = tag.name + ' ' + tag.remarks;
+        tag.name = '';
+    }
+
     return tags.concat(tag);
   }, []);
 
