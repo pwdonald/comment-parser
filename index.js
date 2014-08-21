@@ -49,7 +49,7 @@ function parse_chunk(source) {
     }
 
     if (tag.tag.indexOf('description') > -1) {
-        tag.description = tag.name + ' ' + tag.description;
+        tag.description = (tag.name + ' ' + tag.description).replace(/\r\n|\n/g, '');
         tag.name = '';
     }
 
