@@ -121,7 +121,7 @@ util.inherits(Parser, stream.Transform);
 
 Parser.prototype._transform = function transform(data, encoding, done) {
 
-  var block, lines = data.split(/\n/);
+  var block, lines = data.split(/\r\n|\n/);
 
   while (lines.length) {
     block = this._extract(lines.shift());
@@ -141,7 +141,7 @@ module.exports = function parse(source) {
   var block;
   var blocks  = [];
   var extract = mkextract();
-  var lines   = source.split(/\n/);
+  var lines   = source.split(/\r\n|\n/);
 
   while (lines.length) {
     block = extract(lines.shift());
