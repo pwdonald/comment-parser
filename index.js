@@ -1,177 +1,182 @@
 
-var fs     = require('fs');
+var fs = require('fs');
 var stream = require('stream');
-var util   = require('util');
+var util = require('util');
 
-var _      = require('lodash');
+var _ = require('lodash');
 
 
 var RE_COMMENT_START = /^\s*\/\*\*\s*$/m;
-var RE_COMMENT_LINE  = /^\s*\*(?:\s|$)/m;
-var RE_COMMENT_END   = /^\s*\*\/\s*$/m;
+var RE_COMMENT_LINE = /^\s*\*(?:\s|$)/m;
+var RE_COMMENT_END = /^\s*\*\/\s*$/m;
 
 
 function parse_chunk(source) {
 
-  source = source
-    .reduce(function(sections, line) {
-      if (line.match(/^@(\w+)/)) { sections.push([]); }
-      sections[sections.length - 1].push(line);
-      return sections;
-    }, [[]])
-    .map(function (section) {
-      return section.join('\r\n').trim();
-    });
+    source = source
+      .reduce(function (sections, line) {
+          if (line.match(/^@(\w+)/)) { sections.push([]); }
+          sections[sections.length - 1].push(line);
+          return sections;
+      }, [[]])
+      .map(function (section) {
+          return section.join('\r\n').trim();
+      });
 
-  var description = source[0].match(/^@(\S+)/) ? '' : source.shift();
+    var description = source[0].match(/^@(\S+)/) ? '' : source.shift();
 
-  var tags = source.reduce(function(tags, tag) {
-    var matchs = tag.match(/@(\S+)(?:\s+\{([^\}]+)\})?(?:\s+(\S+))?(?:\s+([^$]+))?/);
+    var tags = source.reduce(function (tags, tag) {
+        var matchs = tag.match(/@(\S+)(?:\s+\{([^\}]+)\})?(?:\s+(\S+))?(?:\s+([^$]+))?/);
 
-    if (!matchs) { return tags; }
+        if (!matchs) { return tags; }
 
-    var tag = {
-      tag         : matchs[1],
-      type        : matchs[2] || '',
-      name        : matchs[3] || '',
-      description : matchs[4] || ''
+        var tag = {
+            tag: matchs[1],
+            type: matchs[2] || '',
+            name: matchs[3] || '',
+            description: matchs[4] || ''
+        };
+
+        if (tag.name.match(/^\[(\S+)\]$/)) {
+            tag.optional = true;
+            tag.name = RegExp.$1;
+
+            if (tag.name.indexOf('=') !== -1) {
+                var parts = tag.name.split('=');
+                tag.name = parts[0];
+                tag.default = parts[1];
+            }
+        }
+
+        if (tag.tag.indexOf('name') > -1 && tag.name.indexOf('[') > -1) {
+            tag.name = tag.name + ' ' + tag.description;
+            tag.description = '';
+        }
+
+        if (tag.tag.indexOf('description') > -1) {
+            tag.description = (tag.name + ' ' + tag.description).replace(/\r\n|\n/g, '');
+            tag.name = '';
+        }
+
+        if (tag.tag.indexOf('remarks') > -1) {
+            tag.remarks = (tag.name + ' ' + tag.description).replace(/\r\n|\n/g, '');
+            tag.name = '';
+        }
+
+        if (tag.tag.indexOf('example') > -1) {
+            tag.remarks = (tag.name + ' ' + tag.description).replace(/\r\n|\n/g, '');
+            tag.name = '';
+        }
+
+        return tags.concat(tag);
+    }, []);
+
+    return {
+        tags: tags,
+        description: description
     };
-
-    if (tag.name.match(/^\[(\S+)\]$/)) {
-      tag.optional = true;
-      tag.name = RegExp.$1;
-
-      if (tag.name.indexOf('=') !== -1) {
-        var parts = tag.name.split('=');
-        tag.name    = parts[0];
-        tag.default = parts[1];
-      }
-    }
-
-    if (tag.tag.indexOf('name') > -1 && tag.name.indexOf('[') > -1) {
-        tag.name = tag.name + ' ' + tag.description;
-        tag.description = '';
-    }
-
-    if (tag.tag.indexOf('description') > -1) {
-        tag.description = (tag.name + ' ' + tag.description).replace(/\r\n|\n/g, '');
-        tag.name = '';
-    }
-
-    if (tag.tag.indexOf('remarks') > -1) {
-        tag.remarks = tag.name + ' ' + tag.remarks;
-        tag.name = '';
-    }
-
-    return tags.concat(tag);
-  }, []);
-
-  return {
-    tags        : tags,
-    description : description
-  };
 };
 
 function mkextract() {
 
-  var chunk = null;
+    var chunk = null;
 
-  return function extract(line) {
-    // if start of comment
-    // then init the chunk
-    if (line.match(RE_COMMENT_START)) {
-      // console.log('line (1)', line);
-      // console.log('  clean:', line.replace(RE_COMMENT_START, ''));
-      chunk = [line.replace(RE_COMMENT_START, '')];
-      return null;
+    return function extract(line) {
+        // if start of comment
+        // then init the chunk
+        if (line.match(RE_COMMENT_START)) {
+            // console.log('line (1)', line);
+            // console.log('  clean:', line.replace(RE_COMMENT_START, ''));
+            chunk = [line.replace(RE_COMMENT_START, '')];
+            return null;
+        }
+
+        // if comment line and chunk started
+        // then append
+        if (chunk && line.match(RE_COMMENT_LINE)) {
+            // console.log('line (2)', line);
+            // console.log('  clean:', line.replace(RE_COMMENT_LINE, ''));
+            chunk.push(line.replace(RE_COMMENT_LINE, ''));
+            return null;
+        }
+
+        // if comment end and chunk started
+        // then parse the chunk and push
+        if (chunk && line.match(RE_COMMENT_END)) {
+            // console.log('line (3)', line);
+            // console.log('  clean:', line.replace(RE_COMMENT_END, ''));
+            chunk.push(line.replace(RE_COMMENT_END, ''));
+            return parse_chunk(chunk);
+        }
+
+        // if non-comment line
+        // then reset the chunk
+        chunk = null;
     }
-
-    // if comment line and chunk started
-    // then append
-    if (chunk && line.match(RE_COMMENT_LINE)) {
-      // console.log('line (2)', line);
-      // console.log('  clean:', line.replace(RE_COMMENT_LINE, ''));
-      chunk.push(line.replace(RE_COMMENT_LINE, ''));
-      return null;
-    }
-
-    // if comment end and chunk started
-    // then parse the chunk and push
-    if (chunk && line.match(RE_COMMENT_END)) {
-      // console.log('line (3)', line);
-      // console.log('  clean:', line.replace(RE_COMMENT_END, ''));
-      chunk.push(line.replace(RE_COMMENT_END, ''));
-      return parse_chunk(chunk);
-    }
-
-    // if non-comment line
-    // then reset the chunk
-    chunk = null;
-  }
 };
 
 /* ------- Transform strean ------- */
 
 function Parser() {
-  stream.Transform.call(this, {objectMode: true});
-  this._extract = mkextract();
+    stream.Transform.call(this, { objectMode: true });
+    this._extract = mkextract();
 }
 
 util.inherits(Parser, stream.Transform);
 
 Parser.prototype._transform = function transform(data, encoding, done) {
 
-  var block, lines = data.split(/\r\n|\n/);
+    var block, lines = data.split(/\r\n|\n/);
 
-  while (lines.length) {
-    block = this._extract(lines.shift());
+    while (lines.length) {
+        block = this._extract(lines.shift());
 
-    if (block) {
-      this.push(block);
+        if (block) {
+            this.push(block);
+        }
     }
-  }
 
-  done();
+    done();
 };
 
 /* ------- Public API ------- */
 
 module.exports = function parse(source) {
 
-  var block;
-  var blocks  = [];
-  var extract = mkextract();
-  var lines   = source.split(/\r\n|\n/);
+    var block;
+    var blocks = [];
+    var extract = mkextract();
+    var lines = source.split(/\r\n|\n/);
 
-  while (lines.length) {
-    block = extract(lines.shift());
-    if (block) {
-      blocks.push(block);
+    while (lines.length) {
+        block = extract(lines.shift());
+        if (block) {
+            blocks.push(block);
+        }
     }
-  }
 
-  return blocks;
+    return blocks;
 }
 
 module.exports.file = function file(file_path, done) {
 
-  var collected = [];
+    var collected = [];
 
-  return fs.createReadStream(file_path, {encoding: 'utf8'})
-    .on('error', done)
+    return fs.createReadStream(file_path, { encoding: 'utf8' })
+      .on('error', done)
 
-    .pipe(new Parser())
-    .on('error', done)
-    .on('data', function(data) {
-      collected.push(data);
-    })
-    .on('finish', function () {
-      done(null, collected);
-    });
+      .pipe(new Parser())
+      .on('error', done)
+      .on('data', function (data) {
+          collected.push(data);
+      })
+      .on('finish', function () {
+          done(null, collected);
+      });
 };
 
 module.exports.stream = function stream() {
-  return new Parser();
+    return new Parser();
 };
 
 
