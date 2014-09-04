@@ -19,8 +19,8 @@ function parse_chunk(source) {
       sections[sections.length - 1].push(line);
       return sections;
     }, [[]])
-    .map(function(section) {
-      return section.join('\n').trim();
+    .map(function (section) {
+      return section.join('\r\n').trim();
     });
 
   var description = source[0].match(/^@(\S+)/) ? '' : source.shift();
