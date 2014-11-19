@@ -1,18 +1,15 @@
-
-var fs = require('fs');
-var stream = require('stream');
-var util = require('util');
-
-var _ = require('lodash');
+var fs = require('fs')
+    , stream = require('stream')
+    , util = require('util')
+    , _ = require('lodash');
 
 
-var RE_COMMENT_START = /^\s*\/\*\*\s*$/m;
-var RE_COMMENT_LINE = /^\s*\*(?:\s|$)/m;
-var RE_COMMENT_END = /^\s*\*\/\s*$/m;
+var RE_COMMENT_START = /^\s*\/\*\*\s*$/m
+    , RE_COMMENT_LINE = /^\s*\*(?:\s|$)/m
+    , RE_COMMENT_END = /^\s*\*\/\s*$/m;
 
 
 function parse_chunk(source) {
-
     source = source
       .reduce(function (sections, line) {
           if (line.match(/^@(\w+)/)) { sections.push([]); }
