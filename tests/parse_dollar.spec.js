@@ -11,16 +11,18 @@ var should = require('should')
   }
 
 describe('Parser', function() {
-    it('parse descriptions with dollar ($) signs', function() {
-        
+    it('parse descriptions with dollar ($) signs', function () {        
         (parsed(function(){
-          /**
-           * Description first line
-           *
-           * $ Description second line
-           */
+            /**
+             * @name IAppStatic
+             * @memberof plat
+             * @kind interface
+             * 
+             * @description
+             * The external interface for the '$AppStatic' injectable.
+             */
           var a;
-        })[0].description)
-          .should.equal('Description first line\r\n\r\n$ Description second line');
+        })[0]['tags'][3].description)
+          .should.equal('The external interface for the \'$AppStatic\' injectable.');
         });
 });
