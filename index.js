@@ -23,7 +23,7 @@ function parse_chunk(source) {
     var description = source[0].match(/^@(\S+)/) ? '' : source.shift();
 
     var tags = source.reduce(function (tags, tag) {
-        var matchs = tag.match(/@(\S+)(?:\s+\{([^\}]+)\})?(?:\s+(\S+))?(?:\s+([^$]+))?/);
+        var matchs = tag.match(/@(\S+)(?:\s+\{([^\}]+)\})?(?:\s+(\S+))?(?:\s+([\s\S]+))?/);
 
         if (!matchs) { return tags; }
 
